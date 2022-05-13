@@ -78,7 +78,7 @@ namespace OpenHardwareMonitor.Utilities {
         return false;
 
       try {
-        listenerThread.Abort();
+/*        listenerThread.Abort();*/
         listener.Stop();
         listenerThread = null;
       } catch (HttpListenerException) {
@@ -116,6 +116,11 @@ namespace OpenHardwareMonitor.Utilities {
       var requestedFile = request.RawUrl.Substring(1);
       if (requestedFile == "data.json") {
         SendJSON(context.Response);
+        return;
+      }
+
+      if (requestedFile == "puredata.json") {
+        SendPureJSON(context.Response);
         return;
       }
 
@@ -234,6 +239,28 @@ namespace OpenHardwareMonitor.Utilities {
       response.Close();
     }
 
+    private void SendPureJSON(HttpListenerResponse response) {
+
+      string JSON = GeneratePureJSON(root);
+
+      var responseContent = JSON;
+      byte[] buffer = Encoding.UTF8.GetBytes(responseContent);
+
+      response.AddHeader("Cache-Control", "no-cache");
+
+      response.ContentLength64 = buffer.Length;
+      response.ContentType = "application/json";
+
+      try {
+        Stream output = response.OutputStream;
+        output.Write(buffer, 0, buffer.Length);
+        output.Close();
+      } catch (HttpListenerException) {
+      }
+
+      response.Close();
+    }
+
     private string GenerateJSON(Node n) {
       string JSON = "{\"id\": " + nodeCount + ", \"Text\": \"" + n.Text 
         + "\", \"Children\": [";
@@ -271,6 +298,78 @@ namespace OpenHardwareMonitor.Utilities {
 
       JSON += "}";
       return JSON;
+    }
+
+    private string GeneratePureJSON(Node n)
+    {
+      /*      string JSON = "{\"Item\": \"" + n.Text
+              + "\" ,";*/
+      string JSON = "{\"PCName\":{\"Name\": \"" + n.Text + "\"},";
+
+
+      foreach (Node child in n.Nodes)
+        JSON += GenerateChildJSON(child) + ", ";
+
+      JSON += "}";
+      return JSON;
+    }
+
+    private string GenerateChildJSON(Node n) {
+      
+      nodeCount++;
+
+      /*    foreach (Node child in n.Nodes)
+            JSON += GenerateChildJSON(child) + ", ";
+          if (JSON.EndsWith(", "))
+            JSON = JSON.Remove(JSON.LastIndexOf(","));
+          JSON += "]";*/
+
+
+      if (n is SensorNode)
+      {
+        string JSON = "{\"Child\": \"" + n.Text
+        + "\"";
+        JSON += ", \"SensorNode\" : 1";
+        JSON += ", \"Name\": \"" + ((SensorNode)n).Name + "\"";
+        JSON += ", \"Type\": \"" + ((SensorNode)n).HWType + "\"";
+        JSON += ", \"Value\": \"" + ((SensorNode)n).Value + "\"";
+
+        JSON += "}";
+        return JSON;
+      }
+      else if (n is HardwareNode)
+      {
+        string JSON = "\"" + ((HardwareNode)n).Hardware.HardwareType.ToString() + "\":{";
+        JSON += "\"Name\":\"" + n.Text + "\"";
+/*        JSON += ", \"HardwareNode\" : 1";
+        JSON += ", \"Name\": \"" + ((HardwareNode)n).Hardware.HardwareType.ToString() + "\"";
+        JSON += ", \"Value\": \"\"";*/
+
+        JSON += "}";
+        return JSON;
+      }
+      else if (n is TypeNode)
+      {
+        string JSON = "{\"Child\": \"" + n.Text
+        + "\"";
+        JSON += ", \"TypeNode\" : 1";
+        JSON += ", \"Value\": \"\"";
+
+        JSON += "}";
+        return JSON;
+      }
+      else
+      {
+        string JSON = "{\"Child\": \"" + n.Text
+        + "\"";
+        JSON += ", \"OthersNode\" : 1";
+        JSON += ", \"Value\": \"\"";
+
+        JSON += "}";
+        return JSON;
+      }
+
+      
     }
 
     private static void ReturnFile(HttpListenerContext context, string filePath) 

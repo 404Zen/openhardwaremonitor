@@ -133,6 +133,15 @@ namespace OpenHardwareMonitor.GUI {
       get { return ValueToString(sensor.Max); }
     }
 
+    public string Name {
+      get { return sensor.Name; }    }
+
+    public string HWType {
+      get {
+        return sensor.Hardware.HardwareType.ToString();
+      }
+    }
+
     public override bool Equals(System.Object obj) {
       if (obj == null) 
         return false;
