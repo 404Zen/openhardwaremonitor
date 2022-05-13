@@ -4,7 +4,7 @@ forked from [openhardwaremonitor/openhardwaremonitor](https://github.com/openhar
 
 
 
-### What's the different
+### What's different
 
 裁剪了json的长度，只保留了实时数据Value的值，以适用于嵌入式IoT获取数据。
 
