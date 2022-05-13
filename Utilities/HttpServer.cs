@@ -13,6 +13,7 @@ using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
@@ -300,30 +301,26 @@ namespace OpenHardwareMonitor.Utilities {
       return JSON;
     }
 
+    uint lastHwType;
+    uint[] HWCount;
     private string GeneratePureJSON(Node n)
     {
-      /*      string JSON = "{\"Item\": \"" + n.Text
-              + "\" ,";*/
-      string JSON = "{\"PCName\":{\"Name\": \"" + n.Text + "\"},";
+      
+      string JSON = "{\"PCName\":{\"Name\": \"" + n.Text + "\"}";
 
+      lastHwType = (uint)Enum.GetValues(typeof(HardwareType)).Cast<HardwareType>().Last();
+      HWCount = new uint[lastHwType + 1];
 
       foreach (Node child in n.Nodes)
-        JSON += GenerateChildJSON(child) + ", ";
+        JSON += ", " + GenerateChildJSON(child);
 
       JSON += "}";
       return JSON;
     }
 
     private string GenerateChildJSON(Node n) {
-      
+
       nodeCount++;
-
-      /*    foreach (Node child in n.Nodes)
-            JSON += GenerateChildJSON(child) + ", ";
-          if (JSON.EndsWith(", "))
-            JSON = JSON.Remove(JSON.LastIndexOf(","));
-          JSON += "]";*/
-
 
       if (n is SensorNode)
       {
@@ -339,11 +336,14 @@ namespace OpenHardwareMonitor.Utilities {
       }
       else if (n is HardwareNode)
       {
-        string JSON = "\"" + ((HardwareNode)n).Hardware.HardwareType.ToString() + "\":{";
+        string JSON = "\"" + ((HardwareNode)n).Hardware.HardwareType.ToString() +
+          HWCount[(uint)(((HardwareNode)n).Hardware.HardwareType)].ToString() + "\":{";
         JSON += "\"Name\":\"" + n.Text + "\"";
-/*        JSON += ", \"HardwareNode\" : 1";
-        JSON += ", \"Name\": \"" + ((HardwareNode)n).Hardware.HardwareType.ToString() + "\"";
-        JSON += ", \"Value\": \"\"";*/
+
+        HWCount[(uint)(((HardwareNode)n).Hardware.HardwareType)]++;
+
+        foreach (Node child in n.Nodes)
+          JSON += ", " + GrandChildJSON(child);
 
         JSON += "}";
         return JSON;
@@ -368,8 +368,28 @@ namespace OpenHardwareMonitor.Utilities {
         JSON += "}";
         return JSON;
       }
+    }
 
-      
+    private string GrandChildJSON(Node n) {
+      string JSON = "\"" + n.Text + "\":{";
+      foreach (Node child in n.Nodes)
+        JSON += GreatGrandChildJSON(child) + ",";
+
+      if (JSON.EndsWith(","))
+        JSON = JSON.Remove(JSON.LastIndexOf(","));
+
+      JSON += "}";
+      return JSON;
+    }
+
+    private string GreatGrandChildJSON(Node n) {
+      string JSON ="\"" + n.Text + "\":";
+
+      if (n is SensorNode) {
+        JSON += "\"" + ((SensorNode)n).Value + "\"";
+      }
+
+      return JSON;
     }
 
     private static void ReturnFile(HttpListenerContext context, string filePath) 
